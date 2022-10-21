@@ -42,20 +42,20 @@ with baud rate of 9600.
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
- ADC_HandleTypeDef hadc;
+ADC_HandleTypeDef hadc;
 DMA_HandleTypeDef hdma_adc;
-
-TIM_HandleTypeDef htim3;
 
 UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_tx;
 
-
 /* USER CODE BEGIN PV */
-char buffer[32];
+uint32_t val =0;
 char buffer1[32];
-uint32_t delay=1000;
+int buffer[12];
+uint32_t delay=2000;
 uint32_t bounce = 0;
+int counter =  0;
+
 //TO DO:
 //TASK 1
 //Create global variables for debouncing and delay interval
@@ -66,13 +66,13 @@ uint32_t bounce = 0;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
-static void MX_USART2_UART_Init(void);
 static void MX_ADC_Init(void);
-static void MX_TIM3_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 void EXTI0_1_IRQHandler(void);
 uint32_t pollADC(void);
 uint32_t ADCtoCRR(uint32_t adc_val);
+void decToBinary(int n);
 
 
 
@@ -112,39 +112,41 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_DMA_Init();
-  MX_USART2_UART_Init();
   MX_ADC_Init();
-  MX_TIM3_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
   //TO DO:
   //Create variables needed in while loop
 
-  HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_4); //Start the PWM on TIM3 Channel 4 (Green LED)
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  EXTI0_1_IRQHandler();
-	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8); // Toggle blue LED
+
 	  //pollADC();
 	  //TO DO:
 	  //TASK 2
 	  //Test your pollADC function and display via UART
-
+	  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
 	      // Convert to string and print
-	   sprintf(buffer1, "ADC Value:\n %d\r\n", pollADC());
+	   sprintf(buffer1, "ADC Value:\n %d\r\n DATA : \r\n", pollADC());
 	   HAL_UART_Transmit(&huart2, (uint8_t*)buffer1, sizeof(buffer1), 1000);
 	  //TASK 3
 	  //Test your ADCtoCRR function. Display CRR value via UART
-		  sprintf(buffer,"ADC to CRR:\n %d\r\n", ADCtoCRR(pollADC()));
-		  HAL_UART_Transmit(&huart2, (uint8_t*)buffer, sizeof(buffer), 1000);
+		  //sprintf(buffer,"ADC to CRR:\n %d\r\n", ADCtoCRR(pollADC()));
+	   if (delay == 1000){
+	   decToBinary(val);
+	   }
+	   sprintf(buffer, "\n");
+	   HAL_UART_Transmit(&huart2, (uint8_t*)buffer1, sizeof(buffer1), 1000);
 	  //TASK 4
 	  //Complete rest of implementation
 
-	    //HAL_Delay(500);
+	    HAL_Delay(delay);
 
     /* USER CODE END WHILE */
 
@@ -248,65 +250,6 @@ static void MX_ADC_Init(void)
 }
 
 /**
-  * @brief TIM3 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM3_Init(void)
-{
-
-  /* USER CODE BEGIN TIM3_Init 0 */
-
-  /* USER CODE END TIM3_Init 0 */
-
-  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-
-  /* USER CODE BEGIN TIM3_Init 1 */
-
-  /* USER CODE END TIM3_Init 1 */
-  htim3.Instance = TIM3;
-  htim3.Init.Prescaler = 0;
-  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim3.Init.Period = 47999;
-  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
-  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_Init(&htim3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_4) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM3_Init 2 */
-
-  /* USER CODE END TIM3_Init 2 */
-  HAL_TIM_MspPostInit(&htim3);
-
-}
-
-/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -372,11 +315,14 @@ static void MX_GPIO_Init(void)
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOF_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LD4_GPIO_Port, LD4_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, LD4_Pin|GPIO_PIN_9, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : B1_Pin */
   GPIO_InitStruct.Pin = B1_Pin;
@@ -384,12 +330,19 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : LD4_Pin */
-  GPIO_InitStruct.Pin = LD4_Pin;
+  /*Configure GPIO pin : PB1 */
+  GPIO_InitStruct.Pin = GPIO_PIN_1;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD4_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : LD4_Pin PC9 */
+  GPIO_InitStruct.Pin = LD4_Pin|GPIO_PIN_9;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB6 PB7 */
   GPIO_InitStruct.Pin = GPIO_PIN_6|GPIO_PIN_7;
@@ -414,11 +367,13 @@ void EXTI0_1_IRQHandler(void)
 	if((HAL_GetTick()- bounce)>10){
 		if(delay==2000)
 		{
+		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9); // Toggle blue LED
 		delay=1000;
 		}
 		else
 		{
-			delay=1000;
+			HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9); // Toggle blue LED
+			delay=2000;
 		}
 		bounce = HAL_GetTick();
 	}
@@ -440,26 +395,55 @@ uint32_t pollADC(void){
     // Get ADC value
     HAL_ADC_Start(&hadc);
     HAL_ADC_PollForConversion(&hadc, HAL_MAX_DELAY);
-    uint32_t val = HAL_ADC_GetValue(&hadc);
+    val = HAL_ADC_GetValue(&hadc);
 
     // Test: Set GPIO pin low
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
 	return val;
 }
 
-uint32_t ADCtoCRR(uint32_t adc_val){
-	//TO DO:
-	//TASK 2
-	adc_val = pollADC();
+// C Code to convert Decimal number into Binary
 
-	// Complete the function body
-	//HINT: The CRR value for 100% DC is 47999 (DC = CRR/ARR = CRR/47999)
-	//HINT: The ADC range is approx 0 - 4095
-	//HINT: Scale number from 0-4096 to 0 - 47999
-	uint32_t val = adc_val*11.9045;
-	__HAL_TIM_SetCompare(&htim3,TIM_CHANNEL_4,val);
 
-	return val;
+void decToBinary(int n)
+{
+    // array to store binary number
+    int binaryNum[12];
+    int i = 0;
+    for (int y = 0; y <12 ;y++){
+    	binaryNum[y] = 0;
+    }
+    // counter for binary array
+    while (n > 0) {
+        // storing remainder in binary array
+        binaryNum[i] = n % 2;
+        n = n / 2;
+        i++;
+    }
+
+    // printing binary array in reverse order
+    if (i == 0){i=11;}
+    for (int j = i-1; j >= 0; j--){
+    	sprintf(buffer, "%d", binaryNum[j]);
+    	HAL_UART_Transmit(&huart2, (uint8_t*)buffer, sizeof(buffer), 1000);
+    }
+
+    for (int j = i-1; j >= 0; j--){
+    	if (binaryNum[j]==1){
+    		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
+    		HAL_Delay(500);
+    	}
+    	else{
+    		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
+    		HAL_Delay(500);
+
+    	}
+    }
+    for (int z = 0 ; z < 10; z++){
+    HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_1);
+    HAL_Delay(100);
+    }
+    counter++;
 }
 
 /* USER CODE END 4 */
@@ -495,3 +479,4 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
+
