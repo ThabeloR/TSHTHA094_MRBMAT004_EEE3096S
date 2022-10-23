@@ -1,23 +1,5 @@
 /* USER CODE BEGIN Header */
-/**
-*******************************************************
-Info:		STM32 ADCs, GPIO Interrupts and PWM with HAL
-Author:		Amaan Vally
-*******************************************************
-In this practical you will learn to use the ADC on the STM32 using the HAL.
-Here, we will be measuring the voltage on a potentiometer and using its value
-to adjust the brightness of the on board LEDs. We set up an interrupt to switch the
-display between the blue and green LEDs.
 
-Code is also provided to send data from the STM32 to other devices using UART protocol
-by using HAL. You will need Putty or a Python script to read from the serial port on your PC.
-
-UART Connections are as follows: 5V->5V GND->GND RXD->PA2 TXD->PA3(unused).
-Open device manager and go to Ports. Plug in the USB connector with the STM powered on.
-Check the port number (COMx). Open up Putty and create a new Serial session on that COMx
-with baud rate of 9600.
-  ******************************************************************************
-  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
@@ -377,10 +359,6 @@ void EXTI0_1_IRQHandler(void)
 	}
 
 	HAL_GPIO_EXTI_IRQHandler(B1_Pin); // Clear interrupt flags
-
-
-
-
 }
 
 uint32_t pollADC(void){
@@ -400,9 +378,7 @@ uint32_t pollADC(void){
 	return val;
 }
 
-// C Code to convert Decimal number into Binary
-
-
+// convert Decimal number into Binary
 void decToBinary(int n)
 {
     // array to store binary number
@@ -418,25 +394,20 @@ void decToBinary(int n)
         n = n / 2;
         i++;
     }
-
-    // printing binary array in reverse order
-    if (i == 0){i=11;}
+    if (i == 0){i=12;}
 //    for (int j = i-1; j >= 0; j--){
 //    	sprintf(buffer, "%d", binaryNum[j]);
 //    	HAL_UART_Transmit(&huart2, (uint8_t*)buffer, sizeof(buffer), 1000);
 //   }
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);// toggle pin 8 to show sending of start bit
     for (int z = 0 ; z < 2; z++){
     	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
         HAL_Delay(250);
     	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
         HAL_Delay(250);
-
     }
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
-
-
-    for (int j = i-1; j >= 0; j--){
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);// toggle pin 8 to show done sending of start bit
+    for (int j = i-1; j >= 0; j--){ // sending of binary values to light up LED for 1 and 0 values
     	if (binaryNum[j]==1){
     		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
     		HAL_Delay(500);
@@ -444,21 +415,19 @@ void decToBinary(int n)
     	else{
     		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
     		HAL_Delay(500);
-
     	}
+    	counter++;
     }
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
+    counter = 0;
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8); // toggle Pin 8(blue led) to show sending of end bit
     for (int z = 0 ; z < 5; z++){
     	HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_SET);
         HAL_Delay(100);
         HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, GPIO_PIN_RESET);
         HAL_Delay(100);
     }
-    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);
-
-    counter++;
+    HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_8);// toggle pin 8 to show end of end bit
 }
-
 /* USER CODE END 4 */
 
 /**

@@ -1,26 +1,9 @@
 /* USER CODE BEGIN Header */
-/**
-*******************************************************
-Info:		STM32 ADCs, GPIO Interrupts and PWM with HAL
-Author:		Amaan Vally
-*******************************************************
-In this practical you will learn to use the ADC on the STM32 using the HAL.
-Here, we will be measuring the voltage on a potentiometer and using its value
-to adjust the brightness of the on board LEDs. We set up an interrupt to switch the
-display between the blue and green LEDs.
 
-Code is also provided to send data from the STM32 to other devices using UART protocol
-by using HAL. You will need Putty or a Python script to read from the serial port on your PC.
-
-UART Connections are as follows: 5V->5V GND->GND RXD->PA2 TXD->PA3(unused).
-Open device manager and go to Ports. Plug in the USB connector with the STM powered on.
-Check the port number (COMx). Open up Putty and create a new Serial session on that COMx
-with baud rate of 9600.
-  ******************************************************************************
-  */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include <math.h>
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -50,11 +33,14 @@ DMA_HandleTypeDef hdma_usart2_tx;
 
 /* USER CODE BEGIN PV */
 uint32_t val =0;
+uint32_t b = 0;
+int binary = 0;
 char buffer1[32];
 int buffer[12];
 uint32_t delay=200;
 uint32_t bounce = 0;
 int counter =  0;
+int inversCounter;
 
 //TO DO:
 //TASK 1
@@ -71,8 +57,7 @@ static void MX_ADC_Init(void);
 /* USER CODE BEGIN PFP */
 void EXTI0_1_IRQHandler(void);
 uint32_t pollADC(void);
-void decToBinary(int n);
-
+int binaryToDecimal(int n);
 
 
 /* USER CODE END PFP */
@@ -125,14 +110,6 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-	  //pollADC();
-	  //TO DO:
-	  //TASK 2
-	  //Test your pollADC function and display via UART
-
-	      // Convert to string and print
-
     /* USER CODE END WHILE */
 	  pollADC();
     /* USER CODE BEGIN 3 */
@@ -150,7 +127,7 @@ int main(void)
 	      	   					pollADC();
 	      	   					if (val > 3000){
 	      	   						HAL_Delay(delay);
-	      	   					HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
+	      	   					HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET); // TOGGLE GREEN TO SHOW MASSAGE READY TO GET DATA
 	      	   						delay = 500;
 	      	   						}
 	      	   					}
@@ -159,27 +136,47 @@ int main(void)
 	      	   		}
 	      	   	}
 	  if (delay == 500){
-		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET);
-		  for  (int o = 0 ; o <12 ; o++){
-			  sprintf(buffer1, "ADC Value:\n %d\r\n", pollADC());
+		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_SET); // SET BLUE LED HIGH TO SHOW READY TO READ DATA
+		  for  (counter = 0 ; counter <12 ; counter++){
+			  pollADC();// LDR DATA IS SAMPLED
+			  if (val < 3000){// COMPARE VALUE TO A SET VALUE
+				  b = 1; // IF SMALL THE IT IS AN LED OF READING AND B IS SET
+			  }
+			  else{b=0;}// ELSS IT IS A HIGH AND BE IS SET
+			  buffer[counter] = b;
+			  sprintf(buffer1, "transmit  value:\n %d\r\n", b);//ITS STORD IN A BUFFER THAT WILL BE PRINTED ON PUTTY
 			  HAL_UART_Transmit(&huart2, (uint8_t*)buffer1, sizeof(buffer1), 500);
-			  HAL_Delay(500);
+			  HAL_Delay(delay);// THE DELAY IS SET THIS IS DONE TO MATCH THE LED TIMEING AND TO MAKE SURE THE SAMPLE DATA IS THE SAME
 		  }
-		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_RESET);
+
+		  if (counter != 12){for(int i=0; i<5;i++){ // IF THERE ARE ANY TIMING ERRORS THEN THE GREEN LED WILL FLASH TO SHOW IT
+			  HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_9);
+			  HAL_Delay(100);}
+		  }
+		  // CONVERT THE BINARY DATA TO ITS ADC EQUVALENT AND HANCE IT MUST MATCH THE GIVEN ADC VALUE
+		  inversCounter = counter -1;
+		  for (int i = 0; i < counter; i++){
+			  binary = binary + (int)pow(2,inversCounter)*buffer[i];
+			  inversCounter--;
+		  }
+		  sprintf(buffer1, "Decimal ADC:\n %d\r\n", binary);//ITS STORD IN A BUFFER THAT WILL BE PRINTED ON PUTTY
+		  HAL_UART_Transmit(&huart2, (uint8_t*)buffer1, sizeof(buffer1), 500);
+		  binary = 0;// AFTER TRANSMISSION REST VALUE FOR NEXT DATA SAMPLE
+		  counter = 0;// RESET FOR NEXT DATA SAMPLE
+		  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_8, GPIO_PIN_RESET);// SHOWS THAT DATA IS DONE RECIVING AND WILL TURN OF BLUE LED
 		  delay = 100;
 	  }
 	  if(delay == 100){
 		  pollADC();
-		  if(val < 3000){
-			  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); // TOGGLE GREEN TO SHOW MASSAGE done
+		  if(val < 3000){// CHECKS IF END BIT IS CORRECT
+			  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_RESET); // TOGGLE GREEN TO SHOW MASSAGE done AND START OF END BIT
 			  HAL_Delay(900);
-			  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);
-			  delay = 200;
+			  HAL_GPIO_WritePin(GPIOC, GPIO_PIN_9, GPIO_PIN_SET);// THIS IS TO SHOW END BIT WAS SEEN
+			  delay = 200;//NEW DELAY VALUE IS SET FOR THE RECEIVER TO GO BACK TO WAITING FOR THE START BIT
 		  }
 	  }
 	         }
 
-  HAL_Delay(1800);
   /* USER CODE END 3 */
 }
 
@@ -432,6 +429,7 @@ uint32_t pollADC(void){
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
 	return val;
 }
+
 
 
 /* USER CODE END 4 */

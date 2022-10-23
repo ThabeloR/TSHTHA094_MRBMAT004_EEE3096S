@@ -60,8 +60,8 @@ all: main-build
 main-build: Mini\ project.elf secondary-outputs
 
 # Tool invocations
-Mini\ project.elf Mini\ project.map: $(OBJS) $(USER_OBJS) /home/thabelo/STM32CubeIDE/workspace_1.10.1/Mini\ project/STM32F051R8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Mini project.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"/home/thabelo/STM32CubeIDE/workspace_1.10.1/Mini project/STM32F051R8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Mini project.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Mini\ project.elf Mini\ project.map: $(OBJS) $(USER_OBJS) C:\Users\tshik\OneDrive\ -\ University\ of\ Cape\ Town\Documents\UCT\3rd\ Year\EEE3096S\New\ folder\TSHTHA094_MRBMAT004_EEE3096S\Mini\ project\Mini\ project\STM32F051R8TX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Mini project.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m0 -T"C:\Users\tshik\OneDrive - University of Cape Town\Documents\UCT\3rd Year\EEE3096S\New folder\TSHTHA094_MRBMAT004_EEE3096S\Mini project\Mini project\STM32F051R8TX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Mini project.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
